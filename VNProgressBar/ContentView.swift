@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Vision
 
 // https://stackoverflow.com/a/63439982
 struct WindowPurity: NSViewRepresentable {
@@ -29,7 +30,8 @@ struct WindowPurity: NSViewRepresentable {
 }
 
 struct ContentView: View {
-    @State private var window: NSWindow?
+    @State var progress: Double?
+    let handler = VisionHandler()
 
     var body: some View {
         HStack {
@@ -42,7 +44,7 @@ struct ContentView: View {
                     VStack(alignment: .leading) {
                         Text("Finding Software")
                             .bold()
-                        ProgressView()
+                        ProgressView(value: progress)
                             .progressViewStyle(.linear)
                             .padding(.trailing)
                         Text("About two millennia remaining")
@@ -56,7 +58,32 @@ struct ContentView: View {
         }.frame(width: 500.0, height: 125.0)
             .background(WindowPurity())
             .onAppear(perform: {
-                VisionHandler().bleh()
+                handler.bleh({ genericRequest, error in
+                    if let nsError = error as NSError? {
+                        print("Face Detection Error", nsError)
+                        return
+                    }
+                    
+                    guard let request = genericRequest as VNRequest? else {
+                        print("Weird request issue")
+                        return
+                    }
+                    
+
+                    DispatchQueue.main.async {
+                        guard let results = request.results as? [VNFaceObservation] else {
+                            return
+                        }
+
+                        print(results)
+
+                        if results.isEmpty {
+                            progress = 0.5
+                        } else {
+                            progress = nil
+                        }
+                    }
+                })
             })
     }
 }

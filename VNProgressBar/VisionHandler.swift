@@ -16,15 +16,16 @@ class VisionHandler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     var captureDevice: AVCaptureDevice?
     var captureDeviceResolution = CGSize()
     private var detectionRequests: [VNDetectFaceRectanglesRequest]?
+    var givenCallback: ((_ request: VNRequest?, _ error: Error?) -> Void)?
 
     // MARK: AVCapture Setup
 
-    func bleh() {
+    func bleh(_ passedCallback: @escaping (_ request: VNRequest?, _ error: Error?) -> Void) {
+        givenCallback = passedCallback
         session = setupAVCaptureSession()
         session?.startRunning()
     }
 
-    /// - Tag: CreateCaptureSession
     func setupAVCaptureSession() -> AVCaptureSession? {
         let captureSession = AVCaptureSession()
         do {
@@ -94,8 +95,6 @@ class VisionHandler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     /// - Tag: PerformRequests
     // Handle delegate method callback on receiving a sample buffer.
     func captureOutput(_: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from _: AVCaptureConnection) {
-        print("hi")
-
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             print("Failed to obtain a CVPixelBuffer for the current output frame.")
             return
@@ -118,16 +117,6 @@ class VisionHandler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     func handleDetectedFaces(request: VNRequest?, error: Error?) {
-        if let nsError = error as NSError? {
-            print("Face Detection Error", nsError)
-            return
-        }
-
-        DispatchQueue.main.async {
-            guard let results = request?.results as? [VNFaceObservation] else {
-                return
-            }
-            print(results)
-        }
+        givenCallback!(request, error)
     }
 }
