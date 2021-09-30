@@ -30,8 +30,10 @@ struct WindowPurity: NSViewRepresentable {
 }
 
 struct ContentView: View {
-    @State var progress: Double?
-    let handler = VisionHandler()
+    @State var progress: Double = 0.0
+    private let handler = VisionHandler()
+    @State private var timer: Timer?
+    @State private var timerRunning: Bool = false
 
     var body: some View {
         HStack {
@@ -42,46 +44,34 @@ struct ContentView: View {
                         .frame(width: 64.0, height: 64.0)
                         .padding(.leading)
                     VStack(alignment: .leading) {
-                        Text("Finding Software")
+                        Text("Downloading software")
                             .bold()
-                        ProgressView(value: progress)
+                        ProgressView(value: progress, total: 1.0)
                             .progressViewStyle(.linear)
                             .padding(.trailing)
-                        Text("About two millennia remaining")
+                        Text("About 2 millennia, 5 minutes remaining")
+                            .font(.subheadline)
                     }
                 }
                 Button(action: {}) {
-                    Text("Stop")
-                }
-                .padding(.trailing)
+                    Text("Stop").padding(.horizontal, 4.0)
+                }.padding(.trailing)
+                .padding(.trailing, 5.0)
             }
-        }.frame(width: 500.0, height: 125.0)
+        }.frame(width: 500.0, height: 135.0)
             .background(WindowPurity())
             .onAppear(perform: {
-                handler.bleh({ genericRequest, error in
-                    if let nsError = error as NSError? {
-                        print("Face Detection Error", nsError)
-                        return
+                self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                    if (timerRunning) {
+                        progress += 0.01
+                    } else if (progress > 0.0) {
+                        progress -= 0.001
                     }
-                    
-                    guard let request = genericRequest as VNRequest? else {
-                        print("Weird request issue")
-                        return
-                    }
-                    
-
+                }
+                
+                handler.bleh({ hasResults in
                     DispatchQueue.main.async {
-                        guard let results = request.results as? [VNFaceObservation] else {
-                            return
-                        }
-
-                        print(results)
-
-                        if results.isEmpty {
-                            progress = 0.5
-                        } else {
-                            progress = nil
-                        }
+                        self.timerRunning = hasResults
                     }
                 })
             })

@@ -16,11 +16,11 @@ class VisionHandler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     var captureDevice: AVCaptureDevice?
     var captureDeviceResolution = CGSize()
     private var detectionRequests: [VNDetectFaceRectanglesRequest]?
-    var givenCallback: ((_ request: VNRequest?, _ error: Error?) -> Void)?
+    var givenCallback: ((_ hasResult: Bool) -> Void)?
 
     // MARK: AVCapture Setup
 
-    func bleh(_ passedCallback: @escaping (_ request: VNRequest?, _ error: Error?) -> Void) {
+    func bleh(_ passedCallback: @escaping (_ hasResult: Bool) -> Void) {
         givenCallback = passedCallback
         session = setupAVCaptureSession()
         session?.startRunning()
@@ -117,6 +117,19 @@ class VisionHandler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     func handleDetectedFaces(request: VNRequest?, error: Error?) {
-        givenCallback!(request, error)
+        if let nsError = error as NSError? {
+            print("Face Detection Error", nsError)
+            return
+        }
+        
+        guard let request = request else {
+            return
+        }
+                
+        guard let results = request.results as? [VNFaceObservation] else {
+            return
+        }
+
+        givenCallback!(results.isEmpty)
     }
 }
